@@ -232,50 +232,41 @@ void ads_all_read(float analog[TOTAL_ANALOG_PINS])
 //SD --------------------------------------------------------------------------------------------------------------------
 SPIClass mySPI = SPIClass(HSPI); //SPI virtual
 
-const char * get_cabecalho_csv()
+String get_cabecalho_csv()
 {
-  String cabecalho = "DATA; HORA; TEMPERATURA; HUMIDADE; CO_PPB; CO_WE; CO_AE; NO2_PPB; NO2_WE; NO2_AE; OX_PPB; OX_WE; OX_AE; NH3_PPB; NH3_WE; NH3_AE; \r\n";
-  return cabecalho.c_str();
+  String cabecalho;
+  cabecalho.concat("DATA; HORA; TEMPERATURA; HUMIDADE; CO_PPB; CO_WE; CO_AE; NO2_PPB; NO2_WE; NO2_AE; OX_PPB; OX_WE; OX_AE; NH3_PPB; NH3_WE; NH3_AE; \r\n");
+  return cabecalho;
 }
 
-bool month_changed()
+bool day_changed()
 {
-  if(get_month() != readings.data[MONTH])
+  if(get_day() != readings.data[DAY])
     return true;
   return false;
 }
 
-const char * get_sd_path()
+String get_sd_path()
 {
   String sd_path;
 
-  if(month_changed())
+  if(day_changed())
   {
-    sd_path.concat(get_month()); sd_path.concat("_");
+    sd_path.concat(get_day()); sd_path.concat("_");
     sd_path.concat(get_year()); sd_path.concat(".csv");
   }
   else
   {
-    sd_path.concat(String(readings.data[MONTH])); sd_path.concat("_");
+    sd_path.concat(String(readings.data[DAY])); sd_path.concat("_");
     sd_path.concat(String(readings.data[YEAR])); sd_path.concat(".csv");  
   }
 
-  return sd_path.c_str();
-}
+  Serial.println("Teste");
+  Serial.println(get_day());
+  Serial.println(get_year());
+  Serial.println(sd_path);
 
-void criar_arquivo(fs::FS &fs, const char * path, const char * message)
-{
-  File file = fs.open(path);
-  if(!file) 
-  {
-    Serial.printf("SD: nao existe o arquivo %s\n", path);
-    Serial.printf("SD: Criando arquivo %s\n", path);
-    writeFile(fs, path, message);
-  }
-  else {
-    Serial.println("SD: arquivo ja existe");  
-  }
-  file.close();
+  return sd_path;
 }
 
 void writeFile(fs::FS &fs, const char * path, const char * message) {
@@ -294,11 +285,26 @@ void writeFile(fs::FS &fs, const char * path, const char * message) {
   file.close();
 }
 
+void criar_arquivo(fs::FS &fs, const char * path, const char * message)
+{
+  File file = fs.open(path);
+  if(!file) 
+  {
+    Serial.printf("SD: nao existe o arquivo %s\n", path);
+    Serial.printf("SD: Criando arquivo %s\n", path);
+    writeFile(fs, path, message);
+  }
+  else {
+    Serial.println("SD: arquivo ja existe");  
+  }
+  file.close();
+}
+
 void appendFile(fs::FS &fs, const char * path, const char * message) {
 
-  if(month_changed)
+  if(day_changed)
   {
-    criar_arquivo(fs, path, get_cabecalho_csv());
+    criar_arquivo(fs, path, get_cabecalho_csv().c_str());
   }
 
   digitalWrite(_SD_CS_, HIGH);
@@ -341,7 +347,17 @@ void setup_sd()
     Serial.println("ERRO - SD nao inicializado!");
     return; 
   }
-  criar_arquivo(SD, get_sd_path(), get_cabecalho_csv());
+  File file = SD.open(get_sd_path().c_str());
+  if(!file) 
+  {
+    Serial.println("SD: arquivo data.csv nao existe");
+    Serial.println("SD: Criando arquivo...");
+    writeFile(SD, get_sd_path().c_str(), get_cabecalho_csv().c_str());
+  }
+  else {
+    Serial.println("SD: arquivo ja existe");  
+  }
+  file.close();
 }
 //SD --------------------------------------------------------------------------------------------------------------------
 
@@ -427,7 +443,7 @@ void build_packet_to_SD(bool print)
   
   if(print)
     Serial.println(leitura);
-  appendFile(SD, get_sd_path(), leitura.c_str());
+  appendFile(SD, get_sd_path().c_str(), leitura.c_str());
 }
 
 bool flag_reading = true;
