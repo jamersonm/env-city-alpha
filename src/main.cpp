@@ -169,10 +169,22 @@ void rtc_read()
   readings.data[SEC] = now.second();
 }
 
-uint8_t get_month() // para comparar no SD
+uint8_t get_day()  // para testes
+{
+  DateTime now = rtc.now();
+  return now.day();
+}
+
+uint8_t get_month()
 {
   DateTime now = rtc.now();
   return now.month();
+}
+
+uint16_t get_year()
+{
+  DateTime now = rtc.now();
+  return now.year() % 100;
 }
 //RTC -------------------------------------------------------------------------------------------------------------------
 
@@ -220,6 +232,52 @@ void ads_all_read(float analog[TOTAL_ANALOG_PINS])
 //SD --------------------------------------------------------------------------------------------------------------------
 SPIClass mySPI = SPIClass(HSPI); //SPI virtual
 
+const char * get_cabecalho_csv()
+{
+  String cabecalho = "DATA; HORA; TEMPERATURA; HUMIDADE; CO_PPB; CO_WE; CO_AE; NO2_PPB; NO2_WE; NO2_AE; OX_PPB; OX_WE; OX_AE; NH3_PPB; NH3_WE; NH3_AE; \r\n";
+  return cabecalho.c_str();
+}
+
+bool month_changed()
+{
+  if(get_month() != readings.data[MONTH])
+    return true;
+  return false;
+}
+
+const char * get_sd_path()
+{
+  String sd_path;
+
+  if(month_changed())
+  {
+    sd_path.concat(get_month()); sd_path.concat("_");
+    sd_path.concat(get_year()); sd_path.concat(".csv");
+  }
+  else
+  {
+    sd_path.concat(String(readings.data[MONTH])); sd_path.concat("_");
+    sd_path.concat(String(readings.data[YEAR])); sd_path.concat(".csv");  
+  }
+
+  return sd_path.c_str();
+}
+
+void criar_arquivo(fs::FS &fs, const char * path, const char * message)
+{
+  File file = fs.open(path);
+  if(!file) 
+  {
+    Serial.printf("SD: nao existe o arquivo %s\n", path);
+    Serial.printf("SD: Criando arquivo %s\n", path);
+    writeFile(fs, path, message);
+  }
+  else {
+    Serial.println("SD: arquivo ja existe");  
+  }
+  file.close();
+}
+
 void writeFile(fs::FS &fs, const char * path, const char * message) {
   Serial.printf("Writing file: %s\n", path);
 
@@ -237,6 +295,12 @@ void writeFile(fs::FS &fs, const char * path, const char * message) {
 }
 
 void appendFile(fs::FS &fs, const char * path, const char * message) {
+
+  if(month_changed)
+  {
+    criar_arquivo(fs, path, get_cabecalho_csv());
+  }
+
   digitalWrite(_SD_CS_, HIGH);
   digitalWrite(18, LOW);
   Serial.printf("Appending to file: %s\n", path);
@@ -277,17 +341,7 @@ void setup_sd()
     Serial.println("ERRO - SD nao inicializado!");
     return; 
   }
-  File file = SD.open("/data.csv");
-  if(!file) 
-  {
-    Serial.println("SD: arquivo data.csv nao existe");
-    Serial.println("SD: Criando arquivo...");
-    writeFile(SD, "/data.csv", "DATA; HORA; TEMPERATURA; HUMIDADE; CO_PPB; CO_WE; CO_AE; NO2_PPB; NO2_WE; NO2_AE; OX_PPB; OX_WE; OX_AE; NH3_PPB; NH3_WE; NH3_AE; \r\n");
-  }
-  else {
-    Serial.println("SD: arquivo ja existe");  
-  }
-  file.close();
+  criar_arquivo(SD, get_sd_path(), get_cabecalho_csv());
 }
 //SD --------------------------------------------------------------------------------------------------------------------
 
@@ -373,7 +427,7 @@ void build_packet_to_SD(bool print)
   
   if(print)
     Serial.println(leitura);
-  appendFile(SD, "/data.csv", leitura.c_str());
+  appendFile(SD, get_sd_path(), leitura.c_str());
 }
 
 bool flag_reading = true;
@@ -590,10 +644,9 @@ void setup()
 
   
   ads_setup();
-  setup_sd();
   sht_setup();
   rtc_setup();
-
+  setup_sd();
 
   os_init();
   LMIC_reset();
