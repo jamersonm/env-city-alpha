@@ -252,19 +252,16 @@ String get_sd_path()
 
   if(day_changed())
   {
+    sd_path.concat("/"); // Problem was in the library... Instead the file name "1" just put "/1"
     sd_path.concat(get_day()); sd_path.concat("_");
     sd_path.concat(get_year()); sd_path.concat(".csv");
   }
   else
   {
+    sd_path.concat("/"); // Problem was in the library... Instead the file name "1" just put "/1"
     sd_path.concat(String(readings.data[DAY])); sd_path.concat("_");
     sd_path.concat(String(readings.data[YEAR])); sd_path.concat(".csv");  
   }
-
-  Serial.println("Teste");
-  Serial.println(get_day());
-  Serial.println(get_year());
-  Serial.println(sd_path);
 
   return sd_path;
 }
@@ -347,17 +344,7 @@ void setup_sd()
     Serial.println("ERRO - SD nao inicializado!");
     return; 
   }
-  File file = SD.open(get_sd_path().c_str());
-  if(!file) 
-  {
-    Serial.println("SD: arquivo data.csv nao existe");
-    Serial.println("SD: Criando arquivo...");
-    writeFile(SD, get_sd_path().c_str(), get_cabecalho_csv().c_str());
-  }
-  else {
-    Serial.println("SD: arquivo ja existe");  
-  }
-  file.close();
+  criar_arquivo(SD, get_sd_path().c_str(), get_cabecalho_csv().c_str());
 }
 //SD --------------------------------------------------------------------------------------------------------------------
 
