@@ -46,7 +46,7 @@ SO2
 #define _APPKEY_KEY_ 0xA5, 0x8B, 0xEC, 0x77, 0x06, 0xCE, 0x14, 0x05, 0x6E, 0xFF, 0xFC, 0x05, 0xAD, 0x71, 0xF2, 0xAB          //msb
 
 //Tempos em segundos
-#define _INTERVALO_ENVIO_ 30 //em minutos
+#define _INTERVALO_ENVIO_ 1 //em minutos
 
 //I2C
 #define _SDA_ 10
@@ -85,27 +85,52 @@ typedef struct _sensors_readings{
 
 SensorsReadings readings;
 
+#define SENSORES_NOVOS
+//#define SENSORES_LONDRINA
+
 //unsigned long tempo_zero = millis();
 // CONFIGS --------------------------------------------------------------------------------------------------------------
 
 //ALPHASENSE ------------------------------------------------------------------------------------------------------------
-// NO2 -> ---
-AlphasenseSensorParam param5 = {"NO2", NO2B43F_n, -0.73, 222, 212, -424, 0.31, 230, 220, 0};
+
+#ifdef SENSORES_NOVOS
+// COB4 -> 162741356
+AlphasenseSensorParam param1 = {"CO-B4", COB4_n, 0.8, 320, 343, 478, 0.382, 332, 344, 0};
+Alphasense_COB4 cob4_s1(param1);
+
+// NO2 -> 202742054
+AlphasenseSensorParam param5 = {"NO2", NO2B43F_n, -0.73, 215, 219, -424, 0.31, 222, 224, 0};
 Alphasense_NO2 no2(param5);
 
-// COB4 -> 354
+// OX -> 204240463
+AlphasenseSensorParam param4 = {"0X", OXB431_n, -0.73, 210, 226, -490, 0.358, 220, 232, -644};
+Alphasense_OX ox(param4);
+
+// SO2 -> 164240347
+AlphasenseSensorParam param6 = {"SO2", SO2B4_n, 0.8, 361, 350, 363, 0.29, 335, 342, 0};
+Alphasense_SO2 so2(param6);
+// SO2 -> 164270544
+// AlphasenseSensorParam param6 = {"SO2", SO2B4_n, 0.8, 361, 350, 363, 0.29, 335, 342, 0};
+// Alphasense_SO2 so2(param6);
+#endif
+
+#ifdef SENSORES_LONDRINA
+// COB4 -> 162741354
 AlphasenseSensorParam param1 = {"CO-B4", COB4_n, 0.8, 330, 316, 510, 0.408, 336, 321, 0};
 Alphasense_COB4 cob4_s1(param1);
 
-// OX -> ---
-AlphasenseSensorParam param4 = {"0X", OXB431_n, -0.73, 229, 234, -506, 0.369, 237, 242, -587};
+// NO2 -> 202742055
+AlphasenseSensorParam param5 = {"NO2", NO2B43F_n, -0.73, 226, 224, -444, 0.324, 232, 227, 0};
+Alphasense_NO2 no2(param5);
+
+// OX -> 204240461
+AlphasenseSensorParam param4 = {"0X", OXB431_n, -0.73, 228, 233, -510, 0.372, 230, 238, -651};
 Alphasense_OX ox(param4);
 
-//AlphasenseSensorParam param2 = {"NH3-B1", COB4_n, 0.8, 775, 277, 59, 0.047, 277, 278, 0};
-//Alphasense_NH3 nh3(param2);
-
-AlphasenseSensorParam param6 = {"SO2", SO2B4_n, 0.8, 361, 350, 363, 0.29, 335, 343, 0};
+// SO2 -> 164240348
+AlphasenseSensorParam param6 = {"SO2", SO2B4_n, 0.8, 378, 336, 351, 0.281, 351, 33, 0};
 Alphasense_SO2 so2(param6);
+#endif
 
 bool isValid(float value) {
     const float MIN_VALID = 0.0;   
@@ -235,7 +260,7 @@ SPIClass mySPI = SPIClass(HSPI); //SPI virtual
 String get_cabecalho_csv()
 {
   String cabecalho;
-  cabecalho.concat("DATA; HORA; TEMPERATURA; HUMIDADE; CO_PPB; CO_WE; CO_AE; NO2_PPB; NO2_WE; NO2_AE; OX_PPB; OX_WE; OX_AE; NH3_PPB; NH3_WE; NH3_AE; \r\n");
+  cabecalho.concat("DATA; HORA; TEMPERATURA; HUMIDADE; CO_PPB; CO_WE; CO_AE; NO2_PPB; NO2_WE; NO2_AE; OX_PPB; OX_WE; OX_AE; SO2_PPB; SO2_WE; SO2_AE; \r\n");
   return cabecalho;
 }
 
@@ -653,6 +678,9 @@ void setup()
 
   os_init();
   LMIC_reset();
+  // testar
+  LMIC_selectSubBand(1); // para acelerar o join
+  
   do_send(&sendjob);//Start
   
 }
